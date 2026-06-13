@@ -2,7 +2,7 @@
 
 A web-based visualization of the global subsea cable network. This project explores the physical infrastructure of the internet and the millions of kilometers of fiber optics lying at the bottom of the ocean.
 
-Live Site: https://init-6.vercel.app
+Live Site: https://init6.saqinnoor.dpdns.org
 
 ## Features
 - **Neural Earth**: A 3D globe using GeoJSON data and Catmull-Rom splines to map real-world cable routes.
@@ -15,4 +15,4 @@ Live Site: https://init-6.vercel.app
 - **Lenis**: Smooth scrolling.
 - **Vanilla CSS**: Custom styling with a brutalist aesthetic.
 
-Built for the INIT 6.0 Web Design Competition by [A.K.M. Saqin Noor](https://instagram.com/saqin_noor).
+Built for the INIT 6.0 Web Design Competition by [A.K.M. Saqin Noor](https://saqinnoor.dpdns.org/instagram).
