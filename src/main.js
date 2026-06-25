@@ -548,12 +548,452 @@ function initGlobe(lenis) {
 }
 
 
+function initBangladeshCanvas() {
+  const canvas = document.getElementById('bd-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = 600, H = 600;
+
+  function resize() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const s = rect.width / W;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = (H * s) + 'px';
+    canvas.width = W;
+    canvas.height = H;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const green = '#99eb1e';
+  const cyan = '#00d4ff';
+  const white = '#ffffff';
+
+  const MAP_LAT_MIN = 0, MAP_LAT_MAX = 30;
+  const MAP_LNG_MIN = 72, MAP_LNG_MAX = 108;
+  const MAP_LAT_RNG = MAP_LAT_MAX - MAP_LAT_MIN;
+  const MAP_LNG_RNG = MAP_LNG_MAX - MAP_LNG_MIN;
+
+  function geoToCanvas(lat, lng) {
+    return {
+      x: (lng - MAP_LNG_MIN) / MAP_LNG_RNG * W,
+      y: (MAP_LAT_MAX - lat) / MAP_LAT_RNG * H
+    };
+  }
+
+  const nodeData = [
+    { lat: 23.8, lng: 90.4, r: 24, label: 'BANGLADESH', color: white, tag: 'DHAKA · NOC' },
+    { lat: 21.4, lng: 92.0, r: 12, label: "COX'S BAZAR", color: green, tag: 'SEA-ME-WE 4/5' },
+    { lat: 21.8, lng: 90.1, r: 12, label: 'KUAKATA', color: green, tag: 'SEA-ME-WE 6' },
+    { lat: 1.3, lng: 103.8, r: 10, label: 'SINGAPORE', color: cyan, tag: 'REGIONAL HUB' },
+    { lat: 13.1, lng: 80.3, r: 10, label: 'CHENNAI', color: green, tag: 'SEA-ME-WE 4' },
+    { lat: 6.9, lng: 79.9, r: 9, label: 'COLOMBO', color: cyan, tag: 'SEA-ME-WE 6' },
+  ];
+
+  const nodes = nodeData.map(d => ({ ...d, ...geoToCanvas(d.lat, d.lng) }));
+
+  const links = [
+    { a: 0, b: 1, color: green, label: '80 km', dash: [4, 8] },
+    { a: 0, b: 2, color: green, label: '120 km', dash: [4, 8] },
+    { a: 1, b: 3, color: cyan, label: '2,400 km', dash: [6, 10] },
+    { a: 1, b: 4, color: green, label: '1,800 km', dash: [6, 10] },
+    { a: 2, b: 5, color: cyan, label: '1,500 km', dash: [6, 10] },
+  ];
+
+  const particles = [];
+  links.forEach((lk, li) => {
+    for (let i = 0; i < 3; i++) {
+      particles.push({
+        li, t: i / 3 + Math.random() * 0.1,
+        speed: 0.002 + Math.random() * 0.002,
+        trail: []
+      });
+    }
+  });
+
+  function midBetween(a, b) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const bend = dist * 0.2;
+    return { x: (a.x + b.x) / 2 - dy / dist * bend, y: (a.y + b.y) / 2 + dx / dist * bend };
+  }
+
+  function sampleLink(lk, t) {
+    const na = nodes[lk.a], nb = nodes[lk.b];
+    const m = midBetween(na, nb);
+    const u = 1 - t;
+    return {
+      x: u * u * na.x + 2 * u * t * m.x + t * t * nb.x,
+      y: u * u * na.y + 2 * u * t * m.y + t * t * nb.y
+    };
+  }
+
+  let countriesGeo = null;
+  let mapLoaded = false;
+
+  fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json')
+    .then(r => r.json())
+    .then(data => { countriesGeo = data; mapLoaded = true; })
+    .catch(() => {});
+
+  function drawMap() {
+    if (!mapLoaded || !countriesGeo) return;
+
+    ctx.save();
+
+    const landColor = 'rgba(12, 20, 36, 0.97)';
+    const borderColor = 'rgba(153, 235, 30, 0.35)';
+    const coastColor = 'rgba(153, 235, 30, 0.5)';
+
+    function drawPolygon(coords, fill, stroke, lw) {
+      ctx.beginPath();
+      let started = false;
+      coords.forEach(([lng, lat]) => {
+        const { x, y } = geoToCanvas(lat, lng);
+        if (x < -10 || x > W + 10 || y < -10 || y > H + 10) return;
+        if (!started) { ctx.moveTo(x, y); started = true; }
+        else ctx.lineTo(x, y);
+      });
+      ctx.closePath();
+      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.stroke(); }
+    }
+
+    ctx.fillStyle = landColor;
+    ctx.fillRect(0, 0, W, H);
+
+    countriesGeo.features.forEach(f => {
+      const geom = f.geometry;
+      if (!geom) return;
+      if (geom.type === 'Polygon') {
+        drawPolygon(geom.coordinates[0], landColor, null, 0);
+      } else if (geom.type === 'MultiPolygon') {
+        geom.coordinates.forEach(poly => drawPolygon(poly[0], landColor, null, 0));
+      }
+    });
+
+    countriesGeo.features.forEach(f => {
+      const geom = f.geometry;
+      if (!geom) return;
+      if (geom.type === 'Polygon') {
+        drawPolygon(geom.coordinates[0], null, borderColor, 1);
+      } else if (geom.type === 'MultiPolygon') {
+        geom.coordinates.forEach(poly => drawPolygon(poly[0], null, borderColor, 1));
+      }
+    });
+
+    countriesGeo.features.forEach(f => {
+      const geom = f.geometry;
+      if (!geom) return;
+      if (geom.type === 'Polygon') {
+        drawPolygon(geom.coordinates[0], null, coastColor, 0.8);
+      } else if (geom.type === 'MultiPolygon') {
+        geom.coordinates.forEach(poly => drawPolygon(poly[0], null, coastColor, 0.8));
+      }
+    });
+
+    ctx.restore();
+  }
+
+  function drawBackground() {
+    ctx.fillStyle = 'rgba(2, 6, 12, 0.15)';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawGrid() {
+    ctx.save();
+    for (let r = 80; r < 400; r += 80) {
+      ctx.beginPath();
+      ctx.arc(300, 240, r, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(153, 235, 30, ${0.03 + r * 0.0001})`;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+    for (let a = 0; a < 6; a++) {
+      const ang = a * Math.PI / 3;
+      ctx.beginPath();
+      ctx.moveTo(300, 240);
+      ctx.lineTo(300 + Math.cos(ang) * 320, 240 + Math.sin(ang) * 320);
+      ctx.strokeStyle = 'rgba(153, 235, 30, 0.025)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawLinks(time) {
+    links.forEach((lk) => {
+      const na = nodes[lk.a], nb = nodes[lk.b];
+      const steps = 60;
+
+      ctx.save();
+
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const p = sampleLink(lk, i / steps);
+        i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+      }
+      ctx.strokeStyle = lk.color;
+      ctx.globalAlpha = 0.06;
+      ctx.lineWidth = 8;
+      ctx.stroke();
+
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const p = sampleLink(lk, i / steps);
+        i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+      }
+      ctx.globalAlpha = 0.12;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      const offset = (time * 0.04) % 20;
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const p = sampleLink(lk, i / steps);
+        i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+      }
+      ctx.globalAlpha = 0.5;
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash(lk.dash);
+      ctx.lineDashOffset = -offset;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const mid = sampleLink(lk, 0.5);
+      ctx.font = '6px "JetBrains Mono", monospace';
+      ctx.fillStyle = lk.color;
+      ctx.globalAlpha = 0.2;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(lk.label, mid.x, mid.y - 4);
+
+      ctx.restore();
+    });
+  }
+
+  function drawParticles(time) {
+    particles.forEach(p => {
+      p.t += p.speed;
+      if (p.t > 1) p.t -= 1;
+
+      const lk = links[p.li];
+      const pos = sampleLink(lk, p.t);
+      const glow = 0.5 + 0.5 * Math.sin(time * 0.004 + p.t * 15 + p.li);
+
+      p.trail.push({ x: pos.x, y: pos.y, life: 1 });
+      if (p.trail.length > 6) p.trail.shift();
+      p.trail.forEach(tr => tr.life -= 0.2);
+
+      ctx.save();
+      p.trail.forEach(tr => {
+        if (tr.life <= 0) return;
+        ctx.beginPath();
+        ctx.arc(tr.x, tr.y, 2 * tr.life, 0, Math.PI * 2);
+        ctx.fillStyle = lk.color;
+        ctx.globalAlpha = tr.life * 0.12;
+        ctx.fill();
+      });
+
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, 2.5 + glow, 0, Math.PI * 2);
+      ctx.fillStyle = white;
+      ctx.globalAlpha = 0.8;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, 5 + glow * 2, 0, Math.PI * 2);
+      ctx.fillStyle = lk.color;
+      ctx.globalAlpha = 0.15 * glow;
+      ctx.fill();
+
+      ctx.restore();
+    });
+  }
+
+  function drawNodes(time) {
+    nodes.forEach((node, i) => {
+      const pulse = 0.5 + 0.5 * Math.sin(time * 0.0015 + i * 1.7);
+      const isCentral = i === 0;
+
+      ctx.save();
+
+      for (let r = 0; r < 3; r++) {
+        const phase = (time * 0.001 + r * 0.35 + i * 0.7) % 1;
+        const radius = node.r + 6 + phase * (isCentral ? 35 : 20);
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = node.color;
+        ctx.globalAlpha = 0.15 * (1 - phase);
+        ctx.lineWidth = isCentral ? 1.5 : 0.8;
+        ctx.stroke();
+      }
+
+      const grad = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, node.r);
+      if (isCentral) {
+        grad.addColorStop(0, 'rgba(153, 235, 30, 0.15)');
+        grad.addColorStop(0.5, 'rgba(153, 235, 30, 0.05)');
+        grad.addColorStop(1, 'rgba(153, 235, 30, 0)');
+      } else {
+        grad.addColorStop(0, 'rgba(153, 235, 30, 0.08)');
+        grad.addColorStop(1, 'rgba(153, 235, 30, 0)');
+      }
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, node.r + (isCentral ? 15 : 8), 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      if (isCentral) {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(153, 235, 30, ${0.15 + 0.1 * pulse})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, isCentral ? 5 : 3, 0, Math.PI * 2);
+      ctx.fillStyle = white;
+      ctx.globalAlpha = 0.9;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, isCentral ? 8 : 5, 0, Math.PI * 2);
+      ctx.fillStyle = node.color;
+      ctx.globalAlpha = 0.2 + 0.15 * pulse;
+      ctx.fill();
+
+      ctx.globalAlpha = 1;
+
+      ctx.font = isCentral ? '9px "JetBrains Mono", monospace' : '7px "JetBrains Mono", monospace';
+      ctx.fillStyle = node.color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(node.label, node.x, node.y - node.r - 8);
+
+      if (node.tag) {
+        ctx.font = '5px "JetBrains Mono", monospace';
+        ctx.fillStyle = `rgba(153, 235, 30, ${0.2 + 0.2 * pulse})`;
+        ctx.fillText(node.tag, node.x, node.y - node.r - (isCentral ? 22 : 18));
+      }
+
+      const statusDot = Math.sin(time * 0.003 + i) > -0.5;
+      if (statusDot) {
+        ctx.beginPath();
+        ctx.arc(node.x + (isCentral ? 70 : 50), node.y - node.r - (isCentral ? 8 : 5), 2, 0, Math.PI * 2);
+        ctx.fillStyle = green;
+        ctx.globalAlpha = 0.5 + 0.5 * pulse;
+        ctx.fill();
+      }
+
+      ctx.restore();
+    });
+  }
+
+  function drawScanLine(time) {
+    const y = (time * 0.06) % H;
+    const g = ctx.createLinearGradient(0, y - 20, 0, y + 20);
+    g.addColorStop(0, 'rgba(153, 235, 30, 0)');
+    g.addColorStop(0.5, 'rgba(153, 235, 30, 0.02)');
+    g.addColorStop(1, 'rgba(153, 235, 30, 0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y - 20, W, 40);
+  }
+
+  function drawStatusBar(time) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillRect(0, H - 24, W, 24);
+
+    ctx.font = '6px "JetBrains Mono", monospace';
+    ctx.textBaseline = 'middle';
+
+    ctx.fillStyle = 'rgba(153, 235, 30, 0.12)';
+    ctx.textAlign = 'left';
+    ctx.fillText('BANGLADESH SUBNET · v2.1', 10, H - 12);
+
+    ctx.textAlign = 'center';
+    const blink = Math.sin(time * 0.003) > 0.2;
+    ctx.fillStyle = blink ? 'rgba(153, 235, 30, 0.15)' : 'rgba(153, 235, 30, 0.05)';
+    ctx.fillText('● SYSTEM ONLINE', 300, H - 12);
+
+    ctx.fillStyle = 'rgba(153, 235, 30, 0.08)';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${Math.floor(time / 1000)}s UPTIME`, W - 10, H - 12);
+
+    ctx.restore();
+  }
+
+  function drawCornerBrackets() {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(153, 235, 30, 0.06)';
+    ctx.lineWidth = 1;
+    const s = 20, gap = 10;
+
+    ctx.beginPath();
+    ctx.moveTo(gap, gap + s); ctx.lineTo(gap, gap); ctx.lineTo(gap + s, gap);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(W - gap - s, gap); ctx.lineTo(W - gap, gap); ctx.lineTo(W - gap, gap + s);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(gap, H - gap - s); ctx.lineTo(gap, H - gap); ctx.lineTo(gap + s, H - gap);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(W - gap - s, H - gap); ctx.lineTo(W - gap, H - gap); ctx.lineTo(W - gap, H - gap - s);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  let animId;
+
+  function draw(time) {
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.fillStyle = '#030b1a';
+    ctx.fillRect(0, 0, W, H);
+
+    drawMap();
+    drawBackground();
+    drawGrid();
+    drawScanLine(time);
+    drawLinks(time);
+    drawParticles(time);
+    drawNodes(time);
+    drawCornerBrackets();
+    drawStatusBar(time);
+
+    animId = requestAnimationFrame(draw);
+  }
+
+  const section = document.getElementById('bangladesh');
+  let isVisible = false;
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && !isVisible) {
+        isVisible = true;
+        animId = requestAnimationFrame(draw);
+      } else if (!entry.isIntersecting && isVisible) {
+        isVisible = false;
+        if (animId) cancelAnimationFrame(animId);
+      }
+    });
+  }, { threshold: 0.1 });
+  observer.observe(section);
+}
+
 function initAnimations() {
 
   gsap.set('.hero-subtitle', { y: '100%' });
   gsap.set('.hero-stats', { opacity: 0, scale: 0.95 });
   gsap.set(['.outro-title', '.outro-body', '.outro-cta-row'], { y: 40 });
   gsap.set('.truth-eyebrow', { y: 20 });
+  gsap.set('.bd-eyebrow', { opacity: 0, y: 20 });
+  gsap.set('.bd-reveal', { opacity: 0, y: 80 });
+  gsap.set('.bd-sub', { opacity: 0, y: 20 });
+  gsap.set('.bd-card', { opacity: 0, x: -30 });
+  gsap.set('.bd-stat-item', { opacity: 0, y: 20 });
 
   const heroTl = gsap.timeline({ paused: true });
   heroTl
@@ -692,6 +1132,31 @@ function initAnimations() {
 
 
   ScrollTrigger.create({
+    trigger: '#bangladesh', start: 'top 65%', once: true,
+    onEnter: () => {
+      gsap.to('.bd-eyebrow', { opacity: 1, y: 0, duration: 0.6 });
+      gsap.to('.bd-reveal', { opacity: 1, y: 0, duration: 0.8, stagger: 0.08, ease: 'expo.out', delay: 0.2 });
+      gsap.to('.bd-sub', { opacity: 1, y: 0, duration: 0.6, delay: 0.5 });
+      gsap.to('.bd-card', { opacity: 1, x: 0, duration: 0.7, stagger: 0.15, ease: 'power3.out', delay: 0.7 });
+      gsap.to('.bd-stat-item', { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, delay: 1.2 });
+    }
+  });
+
+  document.querySelectorAll('.bd-stat-num').forEach(el => {
+    ScrollTrigger.create({
+      trigger: el, start: 'top 80%', once: true,
+      onEnter: () => {
+        const target = parseInt(el.dataset.val, 10);
+        if (target === 2006) {
+          el.textContent = target;
+          return;
+        }
+        animateCounter(el, target);
+      }
+    });
+  });
+
+  ScrollTrigger.create({
     trigger: '#globe-section', start: 'top 70%', once: true,
     onEnter: () => {
       gsap.to('.globe-eyebrow', { opacity: 1, duration: 0.5 });
@@ -721,6 +1186,7 @@ async function main() {
   initCursor();
   initStars();
   initCreatures();
+  initBangladeshCanvas();
   const lenis = initLenis();
   initGlobe(lenis);
   ScrollTrigger.refresh();
