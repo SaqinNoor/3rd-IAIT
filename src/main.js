@@ -983,6 +983,158 @@ function initBangladeshCanvas() {
   observer.observe(section);
 }
 
+function initDashboardCharts() {
+  const bwCanvas = document.getElementById('chart-bandwidth');
+  const owCanvas = document.getElementById('chart-ownership');
+  if (!bwCanvas || !owCanvas) return;
+
+  const W = 400, H = 220;
+
+  function resize(c) {
+    const r = c.parentElement.getBoundingClientRect();
+    const s = r.width / W;
+    c.style.width = r.width + 'px';
+    c.style.height = (H * s) + 'px';
+    c.width = W;
+    c.height = H;
+  }
+  resize(bwCanvas);
+  resize(owCanvas);
+  window.addEventListener('resize', () => { resize(bwCanvas); resize(owCanvas); });
+
+  const bwCtx = bwCanvas.getContext('2d');
+  const owCtx = owCanvas.getContext('2d');
+
+  const bwData = [
+    { year: '2000', value: 2 },
+    { year: '2005', value: 10 },
+    { year: '2010', value: 50 },
+    { year: '2015', value: 200 },
+    { year: '2020', value: 750 },
+    { year: '2025', value: 2500 },
+  ];
+
+  const owData = [
+    { label: 'GOOGLE', value: 25 },
+    { label: 'META', value: 18 },
+    { label: 'MICROSOFT', value: 12 },
+    { label: 'AMAZON', value: 8 },
+    { label: 'TELECOMS', value: 37 },
+  ];
+
+  function drawBandwidth(progress) {
+    const ctx = bwCtx;
+    ctx.clearRect(0, 0, W, H);
+    const pad = { t: 20, r: 20, b: 30, l: 40 };
+    const cw = W - pad.l - pad.r;
+    const ch = H - pad.t - pad.b;
+    const barW = cw / bwData.length * 0.6;
+    const gap = cw / bwData.length;
+    const maxVal = 2600;
+
+    ctx.strokeStyle = 'rgba(153, 235, 30, 0.05)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 5; i++) {
+      const y = pad.t + ch - (i / 5) * ch;
+      ctx.beginPath();
+      ctx.moveTo(pad.l, y);
+      ctx.lineTo(W - pad.r, y);
+      ctx.stroke();
+      ctx.font = '6px "JetBrains Mono", monospace';
+      ctx.fillStyle = 'rgba(153, 235, 30, 0.15)';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText((maxVal * i / 5).toFixed(0), pad.l - 6, y);
+    }
+
+    bwData.forEach((d, i) => {
+      const x = pad.l + i * gap + (gap - barW) / 2;
+      const barH = (d.value / maxVal) * ch * progress;
+      const y = pad.t + ch - barH;
+
+      const grad = ctx.createLinearGradient(x, y, x, pad.t + ch);
+      grad.addColorStop(0, '#99eb1e');
+      grad.addColorStop(1, 'rgba(153, 235, 30, 0.15)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, barW, barH);
+
+      if (barH > 15) {
+        ctx.font = '7px "JetBrains Mono", monospace';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        const val = Math.round(d.value * progress);
+        ctx.fillText(val.toLocaleString(), x + barW / 2, y - 4);
+      }
+
+      ctx.font = '6px "JetBrains Mono", monospace';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(d.year, x + barW / 2, pad.t + ch + 6);
+    });
+
+    ctx.font = '6px "JetBrains Mono", monospace';
+    ctx.fillStyle = 'rgba(153, 235, 30, 0.08)';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('Tbps', pad.l, 4);
+  }
+
+  function drawOwnership(progress) {
+    const ctx = owCtx;
+    ctx.clearRect(0, 0, W, H);
+    const pad = { t: 20, r: 80, b: 20, l: 80 };
+    const cw = W - pad.l - pad.r;
+    const ch = H - pad.t - pad.b;
+    const rowH = ch / owData.length;
+    const barH = rowH * 0.6;
+    const maxVal = 40;
+
+    owData.forEach((d, i) => {
+      const barW = (d.value / maxVal) * cw * progress;
+      const y = pad.t + i * rowH + (rowH - barH) / 2;
+
+      const grad = ctx.createLinearGradient(pad.l, 0, pad.l + cw, 0);
+      grad.addColorStop(0, 'rgba(0, 212, 255, 0.3)');
+      grad.addColorStop(0.6, '#99eb1e');
+      grad.addColorStop(1, 'rgba(153, 235, 30, 0.5)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(pad.l, y, barW, barH);
+
+      ctx.font = '7px "JetBrains Mono", monospace';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(d.label, pad.l - 8, y + barH / 2);
+
+      const pct = Math.round(d.value * progress);
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(pct + '%', pad.l + barW + 6, y + barH / 2);
+    });
+  }
+
+  let bwProgress = { val: 0 };
+  let owProgress = { val: 0 };
+
+  function render() {
+    drawBandwidth(bwProgress.val);
+    drawOwnership(owProgress.val);
+  }
+
+  ScrollTrigger.create({
+    trigger: '#dashboard', start: 'top 70%', once: true,
+    onEnter: () => {
+      gsap.to(bwProgress, { val: 1, duration: 1.2, ease: 'power2.out', onUpdate: render });
+      gsap.to(owProgress, { val: 1, duration: 1.2, ease: 'power2.out', delay: 0.2, onUpdate: render });
+    }
+  });
+
+  render();
+}
+
 function initAnimations() {
 
   gsap.set('.hero-subtitle', { y: '100%' });
@@ -994,6 +1146,11 @@ function initAnimations() {
   gsap.set('.bd-sub', { opacity: 0, y: 20 });
   gsap.set('.bd-card', { opacity: 0, x: -30 });
   gsap.set('.bd-stat-item', { opacity: 0, y: 20 });
+  gsap.set('.dash-eyebrow', { opacity: 0, y: 20 });
+  gsap.set('.dash-reveal', { opacity: 0, y: 80 });
+  gsap.set('.dash-sub', { opacity: 0, y: 20 });
+  gsap.set('.dash-chart-block', { opacity: 0, y: 30 });
+  gsap.set('.dash-stat-item', { opacity: 0, y: 20 });
 
   const heroTl = gsap.timeline({ paused: true });
   heroTl
@@ -1132,6 +1289,22 @@ function initAnimations() {
 
 
   ScrollTrigger.create({
+    trigger: '#dashboard', start: 'top 65%', once: true,
+    onEnter: () => {
+      gsap.to('.dash-eyebrow', { opacity: 1, y: 0, duration: 0.6 });
+      gsap.to('.dash-reveal', { opacity: 1, y: 0, duration: 0.8, stagger: 0.08, ease: 'expo.out', delay: 0.2 });
+      gsap.to('.dash-sub', { opacity: 1, y: 0, duration: 0.6, delay: 0.5 });
+      gsap.to('.dash-chart-block', { opacity: 1, y: 0, duration: 0.7, stagger: 0.2, ease: 'power3.out', delay: 0.6 });
+      gsap.to('.dash-stat-item', { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, delay: 1.1 });
+    }
+  });
+
+  document.querySelectorAll('.dash-stat-num').forEach(el => {
+    ScrollTrigger.create({ trigger: el, start: 'top 80%', once: true, onEnter: () => animateCounter(el, parseInt(el.dataset.val, 10)) });
+  });
+
+
+  ScrollTrigger.create({
     trigger: '#bangladesh', start: 'top 65%', once: true,
     onEnter: () => {
       gsap.to('.bd-eyebrow', { opacity: 1, y: 0, duration: 0.6 });
@@ -1187,6 +1360,7 @@ async function main() {
   initStars();
   initCreatures();
   initBangladeshCanvas();
+  initDashboardCharts();
   const lenis = initLenis();
   initGlobe(lenis);
   ScrollTrigger.refresh();

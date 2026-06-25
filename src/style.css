@@ -1253,6 +1253,196 @@ body::before {
 
 
 
+#dashboard {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  background: var(--black);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.dash-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 6rem 2rem;
+  width: 100%;
+}
+
+.dash-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.4em;
+  color: var(--cyan);
+  margin-bottom: 1.5rem;
+  text-transform: uppercase;
+}
+
+.dash-title {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 8vw, 6rem);
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.5rem;
+}
+
+.dash-title .dash-reveal {
+  display: inline-block;
+}
+
+.dash-title .dash-reveal.acc {
+  color: var(--cyan);
+  text-shadow: 0 0 30px rgba(153, 235, 30, 0.2);
+}
+
+.dash-sub {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.5);
+  max-width: 600px;
+  margin-bottom: 4rem;
+}
+
+.dash-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  margin-bottom: 4rem;
+}
+
+.dash-chart-block {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(153, 235, 30, 0.08);
+  padding: 1.5rem;
+}
+
+.dash-chart-header {
+  margin-bottom: 1rem;
+}
+
+.dash-chart-tag {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.3em;
+  color: var(--cyan);
+  text-transform: uppercase;
+}
+
+.dash-chart-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--white);
+  margin-top: 0.3rem;
+}
+
+.dash-chart-visual {
+  width: 100%;
+}
+
+#chart-bandwidth,
+#chart-ownership {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.dash-chart-note {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 0.75rem;
+  line-height: 1.5;
+}
+
+.dash-chart-note strong {
+  color: var(--cyan);
+}
+
+.dash-stats {
+  display: flex;
+  justify-content: center;
+  gap: clamp(2rem, 4vw, 4rem);
+  padding: 2rem 0;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.dash-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.dash-stat-num {
+  font-family: var(--font-body);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 800;
+  color: var(--white);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.dash-stat-unit {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--cyan);
+  margin-top: -4px;
+}
+
+.dash-stat-label {
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--cyan);
+  text-transform: uppercase;
+  text-align: center;
+  max-width: 120px;
+}
+
+@media (max-width: 768px) {
+  .dash-charts {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .dash-chart-block {
+    padding: 1rem;
+  }
+
+  .dash-chart-title {
+    font-size: 1rem;
+  }
+
+  .dash-stats {
+    gap: 1.5rem;
+  }
+
+  .dash-stat-num {
+    font-size: 1.5rem;
+  }
+
+  .dash-stat-unit {
+    font-size: 0.8rem;
+  }
+
+  .dash-stat-label {
+    font-size: 0.5rem;
+    max-width: 80px;
+  }
+}
+
+
 #bangladesh {
   min-height: 100vh;
   display: flex;
