@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://init6.saqinnoor.dpdns.org/sitemap.xml
+Sitemap: https://3rdiait.saqinnoor.dpdns.org/sitemap.xml
