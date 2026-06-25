@@ -106,8 +106,9 @@ function initLenis() {
 }
 
 
-function initStars() {
-  const field = document.getElementById('star-field');
+function initStars(id = 'star-field') {
+  const field = document.getElementById(id);
+  if (!field) return;
   const canvas = document.createElement('canvas');
   canvas.style.position = 'absolute';
   canvas.style.inset = '0';
@@ -642,7 +643,7 @@ function initBangladeshCanvas() {
 
     ctx.save();
 
-    const landColor = 'rgba(12, 20, 36, 0.97)';
+    const landColor = 'rgba(8, 18, 34, 0.97)';
     const borderColor = 'rgba(153, 235, 30, 0.35)';
     const coastColor = 'rgba(153, 235, 30, 0.5)';
 
@@ -951,7 +952,7 @@ function initBangladeshCanvas() {
   function draw(time) {
     ctx.clearRect(0, 0, W, H);
 
-    ctx.fillStyle = '#030b1a';
+    ctx.fillStyle = '#02040a';
     ctx.fillRect(0, 0, W, H);
 
     drawMap();
@@ -1358,6 +1359,7 @@ function initAnimations() {
 async function main() {
   initCursor();
   initStars();
+  initStars('outro-star-field');
   initCreatures();
   initBangladeshCanvas();
   initDashboardCharts();
